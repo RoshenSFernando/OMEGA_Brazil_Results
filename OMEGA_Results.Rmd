@@ -1,0 +1,348 @@
+---
+title: "OMEGA Simulation Results for Brazil"
+output:
+  flexdashboard::flex_dashboard:
+    theme: readable
+    vertical_layout: fill
+    css: styles.css
+runtime: shiny
+---
+
+```{r}
+pacman::p_load(bslib,data.table,DT,flexdashboard,flextable,here,janitor,plotly,rio,sass,shiny,shinydashboard,shinydashboardPlus,shinyjs,shinyWidgets,tidyverse)
+
+MyColor <- c("#2166AC")
+
+MyColors5 <- c("#CA0020","#F4A582","#FDDBC7","#92C5DE","#0571B0")
+
+MyColors6 <- c("#D53E4F","#FC8D59","#FEE08B","#E6F598","#99D594","#3288BD")
+
+MyColors15 <- c("#FDB462","#FFD92F","#A6D854","#1B9E77","#66A61E",
+                "#80B1D3","#1F78B4","#CAB2D6","#F781BF","#7570B3",
+                "#6A3D9A","#A6761D","#A65628","#FF7F00","#E31A1C")
+
+MyColors24 <- c("#F1E2CC","#FDB462","#FFD92F","#FFFF33","#B2DF8A","#A6D854","#1B9E77","#33A02C",
+                "#66A61E","#8DD3C7","#80B1D3","#1F78B4","#CAB2D6","#BC80BD","#F781BF","#E7298A",
+                "#7570B3","#6A3D9A","#666666","#A6761D","#A65628","#D95F02","#FF7F00","#E31A1C")
+
+Results <- read.csv("ResultsForDashboard.csv",check.names=FALSE)
+Results$Identifier <- as.numeric(zoo::as.yearqtr(Results$Quarter))
+
+Groups <- sort(unique(Results$Group))
+AggregateVariableGroups <- sort(unique(Results$Group[which(is.na(Results$Sector))]))
+SectoralVariableGroups <- sort(unique(Results$Group[which(!is.na(Results$Sector))]))
+
+Assumptions <- c("Credibility Scenarios","Policy Scenarios")
+Expectations <- sort(unique(Results$Expectations))
+Policies <- sort(unique(Results$Policies))
+
+PolicyInterventions <- read.csv("PolicyInterventions.csv",check.names=FALSE)
+PolicyInterventions$Identifier <- as.numeric(zoo::as.yearqtr(PolicyInterventions$Quarter))
+PolicyInterventionPolicies <- sort(unique(PolicyInterventions$Policies))
+
+ScenarioDescriptions <- readxl::read_excel("ScenarioDescriptions.xlsx")
+AccordionItemList <- list()
+for (i in 1:nrow(ScenarioDescriptions)){
+  AccordionItemList[[i]] <- accordionItem(title=ScenarioDescriptions$Scenario[i],ScenarioDescriptions$Description[i],collapsed=TRUE)}
+
+Overview <- data.table::fread("Overview.csv")
+OverviewGroups <- sort(unique(Overview$Group))
+OverviewPolicies <- sort(unique(Overview$Policy))
+
+VariableTitles <- read.csv("VariableTitles.csv",check.names=FALSE)
+```
+
+# Scenarios
+
+```{r}
+fluidRow(
+  box(title="Policy Scenario Descriptions",status="primary",solidHeader=TRUE,collapsible=TRUE,width=12,
+      accordion(id = "accordion1",
+                accordionItem(title=ScenarioDescriptions$Scenario[1],ScenarioDescriptions$Description[1],collapsed=TRUE),
+                accordionItem(title=ScenarioDescriptions$Scenario[2],ScenarioDescriptions$Description[2],collapsed=TRUE),
+                accordionItem(title=ScenarioDescriptions$Scenario[3],ScenarioDescriptions$Description[3],collapsed=TRUE),
+                accordionItem(title=ScenarioDescriptions$Scenario[4],ScenarioDescriptions$Description[4],collapsed=TRUE),
+                accordionItem(title=ScenarioDescriptions$Scenario[5],ScenarioDescriptions$Description[5],collapsed=TRUE),
+                accordionItem(title=ScenarioDescriptions$Scenario[6],ScenarioDescriptions$Description[6],collapsed=TRUE),
+                accordionItem(title=ScenarioDescriptions$Scenario[7],ScenarioDescriptions$Description[7],collapsed=TRUE),
+                accordionItem(title=ScenarioDescriptions$Scenario[8],ScenarioDescriptions$Description[8],collapsed=TRUE),
+                accordionItem(title=ScenarioDescriptions$Scenario[9],ScenarioDescriptions$Description[9],collapsed=TRUE),
+                accordionItem(title=ScenarioDescriptions$Scenario[10],ScenarioDescriptions$Description[10],collapsed=TRUE),
+                accordionItem(title=ScenarioDescriptions$Scenario[11],ScenarioDescriptions$Description[11],collapsed=TRUE),
+                accordionItem(title=ScenarioDescriptions$Scenario[12],ScenarioDescriptions$Description[12],collapsed=TRUE),
+                accordionItem(title=ScenarioDescriptions$Scenario[13],ScenarioDescriptions$Description[13],collapsed=TRUE),
+                accordionItem(title=ScenarioDescriptions$Scenario[14],ScenarioDescriptions$Description[14],collapsed=TRUE),
+                accordionItem(title=ScenarioDescriptions$Scenario[15],ScenarioDescriptions$Description[15],collapsed=TRUE))))
+```
+
+<!-- # Overview -->
+<!-- <div class="fluid-row-content"> -->
+<!-- ```{r} -->
+<!-- fluidRow( -->
+<!--   column(4,shiny::selectInput(inputId="OverviewPolicyScenario",label="Select the Policy Scenario",choices=OverviewPolicies,selected=OverviewPolicies[11],width='700px')), -->
+<!--   column(4,shiny::selectInput(inputId="OverviewCredibilityScenario",label="Select the Credibility Scenario",choices=Expectations,selected=Expectations[1],width='700px')), -->
+<!--   column(4,shiny::selectInput(inputId="OverviewVariableGroup",label="Select the Variable Group",choices=OverviewGroups,selected=OverviewGroups[1],width='700px'))) -->
+<!-- ``` -->
+<!-- </div> -->
+
+<!-- ## Column -->
+
+<!-- ### Overview of the Results -->
+<!-- <div class="data-table-content full-size"> -->
+<!-- ```{r} -->
+<!-- renderDataTable({ -->
+<!--   OverviewCriteria <- which(Overview$Expectation == {input$OverviewCredibilityScenario} & Overview$Policy == {input$OverviewPolicyScenario} & -->
+<!--                               Overview$Group == {input$OverviewVariableGroup}) -->
+<!--   Table <- Overview[OverviewCriteria,c("Indicator","Unit","2024Q4","2029Q4","2039Q4")] -->
+<!--   datatable(Table,options=list(pageLength=10, -->
+<!--                                columnDefs=list( -->
+<!--                                  list(width='5px',targets=0), -->
+<!--                                  list(width='150px',targets=c(1)), -->
+<!--                                  list(width='200px',targets=c(2)), -->
+<!--                                  list(width='50px',targets=c(3,4,5)))))}) -->
+<!-- ``` -->
+<!-- </div> -->
+
+# Policy Interventions
+
+## Inputs {.sidebar}
+<div class="flex-item">
+```{r}
+shiny::selectInput("PolicyInterventionScenario",label="Select the Policy Scenario",choices=PolicyInterventionPolicies,selected=PolicyInterventionPolicies[1])
+
+shiny::textOutput("PolicyVariableText")
+
+shiny::selectInput("CorrespondingSector",label="Select the Sector",choices=NULL)
+
+output$PolicyVariableText <- renderText({
+  req(input$PolicyInterventionScenario)
+  CorrespondingPolicyVariable <- sort(unique(PolicyInterventions$Label[PolicyInterventions$Policies == input$PolicyInterventionScenario]))
+  paste("The variable which characterizes the Policy Intervention best is ", CorrespondingPolicyVariable)})
+
+observe({
+  req(input$PolicyInterventionScenario)
+  CorrespondingSectors  <- sort(unique(PolicyInterventions$Sector[which(PolicyInterventions$Policies == input$PolicyInterventionScenario)]))
+  updateSelectInput(session,"CorrespondingSector",label="Select the Sector",choices=CorrespondingSectors,selected=CorrespondingSectors[1])})
+
+shiny::checkboxGroupInput("CredibilityAssumptionsForPolicy",label="Select the Credibility Scenarios",choices=Expectations,selected=Expectations[1])
+
+shiny::selectInput("PLD",label="Choose the Format for Policy Variables",choices=NULL)
+
+observe({
+  req(input$PolicyInterventionScenario)
+  CorrespondingPolicyVariable <- sort(unique(PolicyInterventions$Label[PolicyInterventions$Policies == input$PolicyInterventionScenario]))
+  FormatsPI <- sort(unique((PolicyInterventions$Format[which(PolicyInterventions$Label == CorrespondingPolicyVariable)])))
+  updateSelectInput(session,"PLD",choices=FormatsPI,selected=FormatsPI[[1]])})
+
+(shiny::downloadButton("DownloadDataPI",label="Download Plotted Data"))
+```
+</div>
+
+## Column
+
+### Policy Interventions
+
+```{r}
+renderPlotly({
+  CorrespondingPolicyVariables <- sort(unique(PolicyInterventions$Label[which(PolicyInterventions$Policies == input$PolicyInterventionScenario)]))[1]
+  SectoralPolicyVariables <- sort(unique(PolicyInterventions$Label[which(PolicyInterventions$Sector != "Not a Sectoral Variable")]))
+  
+  if (CorrespondingPolicyVariables %in% SectoralPolicyVariables){
+    PICriteria <- which(PolicyInterventions$Format == input$PLD & PolicyInterventions$Expectations %in% input$CredibilityAssumptionsForPolicy &
+                          PolicyInterventions$Policies == input$PolicyInterventionScenario & PolicyInterventions$Label == CorrespondingPolicyVariables &
+                          PolicyInterventions$Sector == input$CorrespondingSector)
+    PlotTitlePI <- stringr::str_glue(VariableTitles$Title[which(VariableTitles$Label == CorrespondingPolicyVariables & VariableTitles$Sector == input$CorrespondingSector &
+                                                                  VariableTitles$Format == input$PLD)])
+  } else {
+    PICriteria <- which(PolicyInterventions$Format == input$PLD & PolicyInterventions$Expectations %in% input$CredibilityAssumptionsForPolicy &
+                          PolicyInterventions$Policies == input$PolicyInterventionScenario & PolicyInterventions$Label == CorrespondingPolicyVariables)
+    PlotTitlePI <- stringr::str_glue(VariableTitles$Title[which(VariableTitles$Label == CorrespondingPolicyVariables & VariableTitles$Format == input$PLD)])}
+  
+  DataPI <- PolicyInterventions[PICriteria,c("Expectations","Sector","Quarter","Identifier","Value")]
+  
+  if (input$PLD %in% c("Levels")){
+    DataPI01 <- DataPI[which(DataPI$Identifier < 2023.5),c("Expectations","Sector","Quarter","Value")]
+    DataPI02 <- DataPI[which(DataPI$Identifier >= 2023.25),c("Expectations","Sector","Quarter","Value")]
+    
+    Plot <-
+      plotly::plot_ly(colors=MyColors15) |>
+      plotly::add_trace(data=DataPI01,x=~factor(Quarter),y=~Value,
+                        type="scatter",mode="lines+markers",line=list(color=MyColor),marker=list(color=MyColor),split=~Expectations,showlegend=FALSE) |>
+      plotly::add_trace(data=DataPI02,x=~factor(Quarter),y=~Value,
+                        color=~Expectations,legendgroup=~Expectations,type="scatter",mode="lines+markers",showlegend=TRUE) |>
+      layout(title=PlotTitlePI,font=list(family="Garamond",size=12,color="black"))
+    
+  } else {
+    Plot <-
+      plotly::plot_ly(data=DataPI,x=~factor(Quarter),y=~Value,
+                      color=~Expectations,legendgroup=~Expectations,type="scatter",mode="lines+markers",colors=MyColors15) |>
+      layout(title=PlotTitlePI,font=list(family="Garamond",size=12,color="black"))}
+  
+  Plot <- Plot |> layout(font=list(family="Garamond",size=12),xaxis=list(title='',tickangle=-45),yaxis=list(title=''),
+                         legend=list(title='',orientation="h",xanchor="center",x=0.5,font=list(family="Garamond",size=12)))})
+
+DataPI <- 
+  reactive({
+    CorrespondingPolicyVariables <- sort(unique(PolicyInterventions$Label[which(PolicyInterventions$Policies == input$PolicyInterventionScenario)]))[1]
+    SectoralPolicyVariables <- sort(unique(PolicyInterventions$Label[which(PolicyInterventions$Sector != "Not a Sectoral Variable")]))
+    
+    if (CorrespondingPolicyVariables %in% SectoralPolicyVariables){
+      PICriteria <- which(PolicyInterventions$Format == input$PLD & PolicyInterventions$Expectations %in% input$CredibilityAssumptionsForPolicy &
+                            PolicyInterventions$Policies == input$PolicyInterventionScenario & PolicyInterventions$Label == CorrespondingPolicyVariables &
+                            PolicyInterventions$Sector == input$CorrespondingSector)
+    } else {
+      PICriteria <- which(PolicyInterventions$Format == input$PLD & PolicyInterventions$Expectations %in% input$CredibilityAssumptionsForPolicy &
+                            PolicyInterventions$Policies == input$PolicyInterventionScenario & PolicyInterventions$Label == CorrespondingPolicyVariables)}
+    
+    DataPI <- PolicyInterventions[PICriteria,c("Policies","Expectations","Group","Label","Sector","Quarter","Format","Value")]
+    
+    return(DataPI)})
+
+output$DownloadDataPI <- 
+  shiny::downloadHandler(
+    filename =  function() {paste0("PolicyInterventions_",Sys.time(),".csv")},
+    content = function(filename) {
+      data <- DataPI()
+      write.csv(as.data.frame(data),filename,row.names=FALSE)})
+```
+
+# Results
+
+## Inputs {.sidebar}
+<div class="fluid-row-content">
+```{r}
+shiny::selectInput("VariableGroup",label="Select the Variable Group",choices=Groups,selected=Groups[7])
+
+shiny::selectInput("Variable",label="Select the Variable",choices=NULL)
+observe({
+  req(input$VariableGroup)
+  Variables <- sort(unique(Results$Label[which(Results$Group == input$VariableGroup)]))
+  updateSelectInput(session,"Variable",choices=Variables,selected=Variables[1])})
+
+shiny::conditionalPanel(condition="input.VariableGroup == 'Sectoral Variables' || input.VariableGroup == 'Sectoral Emissions'",
+                        selectInput("Sector",label="Select the Sector",choices=NULL))
+observe({
+  req(input$Variable)
+  Sectors <- sort(unique(Results$Sector[which(Results$Label == input$Variable)]))
+  updateSelectInput(session,"Sector",choices=Sectors,selected=Sectors[1])})
+
+shiny::selectInput("CP",label="Compare by",choices=Assumptions,selected=Assumptions[[1]])
+
+shiny::conditionalPanel(condition="input.CP == 'Credibility Scenarios'",
+                        checkboxGroupInput("CredibilityAssumptions",label="Select the Credibility Scenarios",choices=NULL))
+observe({
+  req(input$CP)
+  updateCheckboxGroupInput(session,"CredibilityAssumptions",choices=Expectations,selected=Expectations[[1]])})
+
+shiny::conditionalPanel(condition="input.CP == 'Credibility Scenarios'",
+                        selectInput("PolicyScenarios",label="Select the Policy Scenarios",choices=NULL))
+observe({
+  req(input$CP)
+  updateSelectInput(session,"PolicyScenarios",choices=Policies,selected=Policies[[1]])})
+
+shiny::conditionalPanel(condition="input.CP == 'Policy Scenarios'",
+                        checkboxGroupInput("PolicyAssumptions",label="Select the Policy Scenarios",choices=NULL))
+observe({
+  req(input$CP)
+  updateCheckboxGroupInput(session,"PolicyAssumptions",choices=Policies,selected=Policies[[1]])})
+
+shiny::conditionalPanel(condition="input.CP == 'Policy Scenarios'",
+                        selectInput("CredibilityScenarios",label="Select the Credibility Scenarios",choices=NULL))
+observe({
+  req(input$CP)
+  updateSelectInput(session,"CredibilityScenarios",choices=Expectations,selected=Expectations[[1]])})
+
+shiny::selectInput("LD",label="Choose the Format for Results",choices=NULL)
+
+observe({
+  req(input$Variable)
+  Formats <- sort(unique((Results$Format[which(Results$Label == input$Variable)])))
+  updateSelectInput(session,"LD",choices=Formats,selected=Formats[[1]])})
+
+(shiny::downloadButton("DownloadData",label="Download Plotted Data"))
+```
+</div>
+
+## Column
+
+### Results
+
+```{r}
+renderPlotly({
+  Assumptions <<- if (input$CP == "Credibility Scenarios") input$CredibilityAssumptions else input$PolicyAssumptions
+  Scenarios <<- if (input$CP == "Credibility Scenarios") input$PolicyScenarios else input$CredibilityScenarios
+  RF <<- input$LD
+  VARG <<- input$VariableGroup
+  VAR <<- input$Variable
+  VARS <<- input$Sector
+  
+  ExpectationCriteria <- if (input$CP == "Credibility Scenarios") Assumptions else Scenarios
+  PolicyCriteria <- if (input$CP == "Credibility Scenarios") Scenarios else Assumptions
+  SplitCriteria <- if (input$CP == "Credibility Scenarios") "Expectations" else "Policies"
+  
+  if (input$VariableGroup == 'Sectoral Variables' || input$VariableGroup == 'Sectoral Emissions'){
+    Criteria <- which(Results$Format == RF & Results$Expectations %in% ExpectationCriteria & Results$Policies %in% PolicyCriteria & 
+                        Results$Group == VARG & Results$Label == VAR & Results$Sector == VARS)
+    PlotTitle <- 
+      stringr::str_glue(VariableTitles$Title[which(VariableTitles$Label == input$Variable & VariableTitles$Sector == input$Sector & VariableTitles$Format == input$LD)])
+    
+  } else {
+    Criteria <- which(Results$Format == RF & Results$Expectations %in% ExpectationCriteria & Results$Policies %in% PolicyCriteria & 
+                        Results$Group == VARG & Results$Label == VAR)
+    PlotTitle <- stringr::str_glue(VariableTitles$Title[which(VariableTitles$Label == input$Variable & VariableTitles$Format == input$LD)])}
+  
+  Data <- Results[Criteria,c("Expectations","Policies","Sector","Quarter","Identifier","Value")]
+  
+  if (input$LD %in% c("Levels","Levels over GDP")){
+    Data01 <- Data[which(Data$Identifier < 2023.5),c("Expectations","Policies","Sector","Quarter","Value")]
+    Data02 <- Data[which(Data$Identifier >= 2023.25),c("Expectations","Policies","Sector","Quarter","Value")]
+    
+    Plot <-
+      plotly::plot_ly(colors=MyColors15) |>
+      plotly::add_trace(data=Data01,x=~factor(Quarter),y=~Value,
+                        type="scatter",mode="lines+markers",line=list(color=MyColor),marker=list(color=MyColor),split=as.formula(paste0("~",SplitCriteria)),showlegend=FALSE) |>
+      plotly::add_trace(data=Data02,x=~factor(Quarter),y=~Value,
+                        color=as.formula(paste0("~",SplitCriteria)),legendgroup=as.formula(paste0("~",SplitCriteria)),type="scatter",mode="lines+markers",showlegend=TRUE) |>
+      layout(title=PlotTitle,font=list(family="Garamond",size=12,color="black"))
+    
+  } else {
+    Plot <-
+      plotly::plot_ly(data=Data,x=~factor(Quarter),y=~Value,
+                      color=as.formula(paste0("~",SplitCriteria)),legendgroup=as.formula(paste0("~",SplitCriteria)),type="scatter",mode="lines+markers",colors=MyColors15) |>
+      layout(title=PlotTitle,font=list(family="Garamond",size=12,color="black"))}
+  
+  Plot <- Plot |> layout(font=list(family="Garamond",size=12),xaxis=list(title='',tickangle=-45),yaxis=list(title=''),
+                         legend=list(title='',orientation="h",xanchor="center",x=0.5,font=list(family="Garamond",size=12)))})
+
+Data <- reactive({
+  Assumptions <- if (input$CP == "Credibility Scenarios") input$CredibilityAssumptions else input$PolicyAssumptions
+  Scenarios <- if (input$CP == "Credibility Scenarios") input$PolicyScenarios else input$CredibilityScenarios
+  RF <- input$LD
+  VARG <- input$VariableGroup
+  VAR <- input$Variable
+  VARS <- input$Sector
+  
+  ExpectationCriteria <- if (input$CP == "Credibility Scenarios") Assumptions else Scenarios
+  PolicyCriteria <- if (input$CP == "Credibility Scenarios") Scenarios else Assumptions
+  SplitCriteria <- if (input$CP == "Credibility Scenarios") "Expectations" else "Policies"
+  
+  if (input$VariableGroup %in% c('Sectoral Variables', 'Sectoral Emissions')) {
+    Criteria <- which(Results$Format == RF & Results$Expectations %in% ExpectationCriteria &
+                        Results$Policies %in% PolicyCriteria & Results$Group == VARG &
+                        Results$Label == VAR & Results$Sector == VARS)
+  } else {
+    Criteria <- which(Results$Format == RF & Results$Expectations %in% ExpectationCriteria &
+                        Results$Policies %in% PolicyCriteria & Results$Group == VARG &
+                        Results$Label == VAR)}
+  
+  Data <- Results[Criteria, c("Expectations","Policies","Group","Label","Sector","Quarter","Format","Value")]
+  
+  return(Data)})
+
+output$DownloadData <- 
+  shiny::downloadHandler(
+    filename =  function() {paste0("Results_",Sys.time(),".csv")},
+    content = function(filename) {
+      data <- Data()
+      write.csv(as.data.frame(data),filename,row.names=FALSE)})
+```
